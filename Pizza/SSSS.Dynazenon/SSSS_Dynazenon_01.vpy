@@ -120,15 +120,15 @@ merge_scale = join([merge_scale, plane(bb, 1), plane(bb,2)])
 
 
 ###DENOISE
-ref = haf.SMDegrain(merge_scale, tr=3, prefilter=3, search=3, contrasharp=True, RefineMotion=True, thSAD=150)
-dn = mvf.BM3D(merge_scale, ref=ref, sigma=[1, 0, 0], profile1="fast", radius1=2)
+ref = haf.SMDegrain(merge_scale, tr=2, RefineMotion=True, thSAD=140)
+dn = mvf.BM3D(merge_scale, ref=ref, sigma=[1, 0, 0], profile1="fast", radius1=1)
 dn = core.knlm.KNLMeansCL(dn, h=0.7, a=4, d=3, s=4, device_type='gpu', device_id=0, channels='UV')
 dn = vdf.decsiz(dn, sigmaS=10, min_in=128<<8, max_in=200<<8, gamma=1.1)
 dn = haf.ContraSharpening(dn, merge_scale)
 
 
 ###MASKS
-ed_gray = core.std.ShufflePlanes(dn, 0, vs.GRAY)
+ed_gray = core.std.ShufflePlanes(ref, 0, vs.GRAY)
 rmask = debandshit.rangemask(ed_gray, 2, 2)
 emask = ed_gray.std.Prewitt()
 
@@ -143,8 +143,8 @@ rm_txt = core.std.Expr([rmask, em_hi, em_me, em_lo], 'x y z a min min min')
 weighted = LevelsM(rm_txt, points=[x *256 for x in (1.75, 2.5, 5, 10)], levels=[0, 1, 1, 0], xpass=[0,0], return_expr=0)
 texture_mask = weighted.std.BoxBlur(hradius=8,vradius=8).std.Expr(f'x {65535 * 0.2} - {1 / (1 - 0.2)} *')
 
-detail_mask = lvf.denoise.detail_mask(dn, brz_a=3000, brz_b=2500)
-line_mask1 = kgf.retinex_edgemask(dn)
+detail_mask = lvf.denoise.detail_mask(ref, brz_a=3000, brz_b=2500)
+line_mask1 = kgf.retinex_edgemask(ref)
 line_mask2 = line_mask1.std.Binarize(60<<7)
 db_mask = core.std.Expr([detail_mask, line_mask2, texture_mask], 'x y z max max') #some extra minor line protection and texture protection
 aa_mask = line_mask1.std.Binarize(60<<8).std.Maximum().std.Convolution([1]*9)
@@ -169,11 +169,10 @@ db = core.std.MaskedMerge(db, cwarp, db_mask)
 
 
 ###GRAIN
-grain1 = adptvgrnMod(db, strength=0.2, size=1.00, luma_scaling=12, sharp=80, static=True, lo=19)
-grain2 = adptvgrnMod(db, strength=0.05, size=1.00, luma_scaling=30, sharp=80, static=False, lo=19)
+grain = adptvgrnMod(db, strength=0.2, size=1.00, luma_scaling=8, sharp=80, static=True, lo=19)
 
 
 ###OUTPUT
-out = fvf.Depth(grain2, 10)
-#comp = core.std.Interleave([dehardsub, merge_scale])
+out = fvf.Depth(grain, 10)
+#comp = core.std.Interleave([ref, dn])
 out.set_output()
