@@ -113,7 +113,7 @@ edborder = core.std.Expr([edborder1, edborder2, edborder3], 'x y z max max').std
 error_ed = core.std.Expr([edborder, abs_error_m], 'x y max')
 
 descale_m = lvf.rfs(abs_error_m, error_ed, ed_split_ranges)
-rescale = vdf.fsrcnnx_upscale(descale, shader_file=shader, profile = 'zastin')
+rescale = vdf.fsrcnnx_upscale(darken, shader_file=shader, profile = 'zastin')
 #rescale = nnedi3_rpow2(descale).resize.Spline36(1920, 1080)
 merge_scale = core.std.MaskedMerge(rescale, get_y(bb), descale_m)
 merge_scale = join([merge_scale, plane(bb, 1), plane(bb,2)])
