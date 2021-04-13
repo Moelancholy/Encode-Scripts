@@ -1,12 +1,5 @@
 import vapoursynth as vs
-import ntpath
-import vapoursynth as vs
-import ntpath
-import os
-import math
 from math import ceil
-from os import path
-from glob import glob
 from functools import partial
 
 import awsmfunc as awf
@@ -18,7 +11,6 @@ import kagefunc as kgf
 import lvsfunc as lvf
 import mvsfunc as mvf
 import vardefunc as vdf
-import vsutil
 import xvs
 
 from adptvgrnMod import adptvgrnMod
@@ -200,11 +192,11 @@ rmask = debandshit.rangemask(ed_gray, 2, 2)
 emask = ed_gray.std.Prewitt()
 
 em_hi = emask.std.Binarize(60 * 257, v0=65535, v1=0)
-em_hi = vsutil.iterate(em_hi, core.std.Minimum, 5)
+em_hi = iterate(em_hi, core.std.Minimum, 5)
 em_me = emask.std.Binarize(40 * 257, v0=65535, v1=0)
-em_me = vsutil.iterate(em_me, core.std.Minimum, 4)
+em_me = iterate(em_me, core.std.Minimum, 4)
 em_lo = emask.std.Binarize(20 * 257, v0=65535, v1=0)
-em_lo = vsutil.iterate(em_lo, core.std.Minimum, 2)
+em_lo = iterate(em_lo, core.std.Minimum, 2)
 rm_txt = core.std.Expr([rmask, em_hi, em_me, em_lo], 'x y z a min min min')
 
 weighted = LevelsM(rm_txt, points=[x *256 for x in (1.75, 2.5, 5, 10)], levels=[0, 1, 1, 0], xpass=[0,0], return_expr=0)
