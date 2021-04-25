@@ -225,7 +225,7 @@ cwarp = core.std.MaskedMerge(merge_scale, cwarp, cmask)
 ###DEBAND
 weakdb = vdf.dumb3kdb(cwarp, **weak_deband_args)
 strongdb = placebo.deband(cwarp, **strong_deband_args)
-db = lvf.rfs(weakdb, strongdb, hardsubs_GTFO_ranges)
+db = lvf.rfs(weakdb, strongdb, strong_deband_ranges)
 db = core.std.MaskedMerge(db, cwarp, db_mask)
 
 
