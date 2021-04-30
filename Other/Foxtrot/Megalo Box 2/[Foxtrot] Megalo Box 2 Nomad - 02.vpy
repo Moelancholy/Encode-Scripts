@@ -100,7 +100,13 @@ sub_mask_2 =  core.std.Expr(split(core.std.Expr([waka, amazon], 'x y - abs').res
 sub_mask_2 = sub_mask_2.std.Binarize(10<<8).std.Minimum().std.Maximum().std.Maximum().std.Maximum().std.Maximum().std.Maximum().std.Maximum().std.Inflate().std.Inflate().std.Inflate().std.Inflate().std.Inflate()
 sub_mask_2 = zzf.combine(zzf.shiftframes(sub_mask_2, [-6, 6])).std.Expr('x 257 *', vs.GRAY16)
 sub_mask = lvf.rfs(sub_mask_1, sub_mask_2, hardsubs_GTFO_ranges)
-dehardsub = core.std.MaskedMerge(waka, amazon, sub_mask)
+
+blurred = core.bilateral.Bilateral(get_y(waka), sigmaS=5, sigmaR=0.075)
+merge_mask = gf.EdgeDetect(blurred, mode='scharr').rgvs.RemoveGrain(3).std.Binarize(70<<6).std.Convolution([1]*9)
+replace_mask = core.std.Expr([merge_mask, sub_mask], 'x y -')
+dehardsub1 = core.std.MaskedMerge(get_y(amazon), get_y(waka), replace_mask)
+dehardsub2 = core.std.MaskedMerge(waka, amazon, sub_mask)
+dehardsub = vdf.merge_chroma(dehardsub1, dehardsub2)
 
 
 ###DIRTYLINES
@@ -110,8 +116,8 @@ bb32 = depth(bb, 32)
 
 
 ###DENOISE AND SCALE
-chromadn = core.knlm.KNLMeansCL(bb, h=0.5, a=3, d=2, s=3, device_type='gpu', device_id=0, channels='UV')
-descale1 = core.descale.Debilinear(get_y(bb32), 1280, 720)
+chromadn = core.knlm.KNLMeansCL(bb, h=0.55, a=3, d=2, s=3, device_type='gpu', device_id=0, channels='UV')
+descale1 = core.descale.Debicubic(get_y(bb32), 1280, 720, 1/3, 1/3)
 descale = depth(descale1, 16)
 downscale = core.resize.Bicubic(get_y(bb), 1280, 720)
 errorscale = descale1.resize.Bilinear(1920, 1080)
@@ -136,7 +142,7 @@ rm_txt = core.std.Expr([rmask, em_hi, em_me, em_lo], 'x y z a min min min')
 weighted = LevelsM(rm_txt, points=[x *256 for x in (1.75, 2.5, 5, 10)], levels=[0, 1, 1, 0], xpass=[0,0], return_expr=0)
 
 texture_mask = weighted.std.BoxBlur(hradius=8,vradius=8).std.Expr(f'x {65535 * 0.2} - {1 / (1 - 0.2)} *')
-detail_mask = lvf.denoise.detail_mask(luma, brz_a=3000, brz_b=2500)
+detail_mask = lvf.mask.detail_mask(luma, brz_a=3000, brz_b=2500)
 based_mask = core.std.Expr([detail_mask, texture_mask], 'x y +')
 
 ref = haf.SMDegrain(luma, tr=2, RefineMotion=True, thSAD=120)
@@ -146,9 +152,11 @@ dnluma = haf.ContraSharpening(dnluma, luma)
 
 
 ###DEHALO
-dhmask = haf.HQDeringmod(dnluma, show=True)
-dh = gf.MaskedDHA(dnluma, rx=2.0, ry=2.0, darkstr=0.20, brightstr=1.0, maskpull=0, maskpush=60)
-dh = core.std.MaskedMerge(dnluma, dh, dhmask)
+darken = haf.FastLineDarkenMOD(dnluma, strength=12)
+dering = haf.EdgeCleaner(darken, 15, smode=1, hot=True)
+dhmask = haf.HQDeringmod(dering, show=True)
+dh = gf.MaskedDHA(dering, rx=2.0, ry=2.0, darkstr=0.20, brightstr=1.0, maskpull=0, maskpush=60)
+dh = core.std.MaskedMerge(dering, dh, dhmask)
 
 
 ###AA
@@ -167,22 +175,25 @@ aa = aa.resize.Bicubic(width=1280, height=720)
 aa = dh.std.MaskedMerge(aa, aa_mask)
 aa = core.rgvs.Repair(aa, dh, 13)
 
+
 ###MERGE
-plane_u = core.resize.Bicubic(plane(chromadn, 1), 1280, 720)
-plane_v = core.resize.Bicubic(plane(chromadn, 2), 1280, 720)
+plane_u = core.resize.Bicubic(plane(chromadn, 1), 1280, 720, src_left=.25)
+plane_v = core.resize.Bicubic(plane(chromadn, 2), 1280, 720, src_left=.25)
 merge = join([aa, plane_u, plane_v])
 
+
 ###DEBAND
-db = vdf.dumb3kdb(merge, threshold=50, grain=0)
+db = vdf.dumb3kdb(merge, radius=14, threshold=57, grain=0)
 db = core.std.MaskedMerge(db, merge, based_mask)
 
 
 ##GRAIN
-grain = adptvgrnMod(db, strength=0.1, size=1.60, luma_scaling=10, sharp=60, static=True, lo=19, hi=[200, 240, 240])
-grain = adptvgrnMod(grain, strength=0.06, size=1.60, luma_scaling=4, sharp=60, static=False, lo=19, hi=[200, 240, 240])
-#upscalecomp = core.resize.Spline36(grain, 1920, 1080)
+grain = adptvgrnMod(db, strength=0.10, size=1.00, luma_scaling=10, sharp=60, static=True, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(grain, strength=0.07, size=1.00, luma_scaling=4, sharp=60, static=False, lo=19, hi=[200, 240, 240])
+upscalecomp = core.resize.Spline36(grain, 1920, 1080)
+
 
 ###OUTPUT
 out = depth(grain, 10)
-#comp = core.std.Interleave([get_y(bb), get_y(upscalecomp)])
+#comp = core.std.Interleave([mergeS, cwarpS])
 out.set_output()

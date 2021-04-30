@@ -21,7 +21,7 @@ from rektlvl import rektlvls
 from vsutil import *
 
 core = vs.core
-core.max_cache_size = 1024 * 64
+core.max_cache_size = 1024 * 48
 
 
 
@@ -81,17 +81,17 @@ def LevelsM(clip, points, levels, xpass=[0, 'peak'], return_expr=False):
 
 
 ###STUFF
-waka = core.lsmas.LWLibavSource(source=r"C:\Users\twint\Desktop\Megalo\03\Megalobox S02E03 [1080p][AAC][JapDub][GerSub][Web-DL].mkv")
+waka = core.lsmas.LWLibavSource(source=r"C:\Users\twint\Desktop\Megalo\04\Megalobox S02E04 [1080p][AAC][JapDub][GerSub][Web-DL].mkv")
 waka = waka[0] + waka
 waka = depth(waka, 16)
 
-amazon = core.ffms2.Source(source=r"C:\Users\twint\Desktop\Megalo\03\Nomad - Megalo Box 2 - 03 (Amazon Prime CBR 1080p).mkv")
+amazon = core.ffms2.Source(source=r"C:\Users\twint\Desktop\Megalo\04\Nomad - Megalo Box 2 - 04 (Amazon Prime CBR 1080p).mkv")
 amazon = depth(amazon, 16)
 
 
 ###SCENEFILTER
-opstart = 2377 #first frame with any shit thats not black
-hardsubs_GTFO_ranges = [(opstart+420, opstart+570), (5730, 5846)]
+opstart = 1155 #first frame with any shit thats not black
+hardsubs_GTFO_ranges = [(opstart+420, opstart+570)]
 
 
 ###DEHARDSUB
@@ -180,23 +180,21 @@ aa = core.rgvs.Repair(aa, dh, 13)
 plane_u = core.resize.Bicubic(plane(chromadn, 1), 1280, 720, src_left=.25)
 plane_v = core.resize.Bicubic(plane(chromadn, 2), 1280, 720, src_left=.25)
 merge = join([aa, plane_u, plane_v])
+cwarp = xvs.WarpFixChromaBlend(merge, thresh=80)
 
 
 ###DEBAND
-db = vdf.dumb3kdb(merge, radius=14, threshold=57, grain=0)
-db = core.std.MaskedMerge(db, merge, based_mask)
+db = vdf.dumb3kdb(cwarp, radius=14, threshold=57, grain=0)
+db = core.std.MaskedMerge(db, cwarp, based_mask)
 
 
 ##GRAIN
-grain = adptvgrnMod(db, strength=0.10, size=1.00, luma_scaling=10, sharp=60, static=True, lo=19, hi=[200, 240, 240])
-grain = adptvgrnMod(grain, strength=0.07, size=1.00, luma_scaling=4, sharp=60, static=False, lo=19, hi=[200, 240, 240])
-upscalecomp = core.resize.Spline36(grain, 1920, 1080)
+grain = adptvgrnMod(db, strength=0.12, size=1.00, luma_scaling=10, sharp=60, static=True, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(grain, strength=0.08, size=1.00, luma_scaling=4, sharp=60, static=False, lo=19, hi=[200, 240, 240])
+#upscalecomp = core.resize.Spline36(grain, 1920, 1080)
 
 
 ###OUTPUT
 out = depth(grain, 10)
 #comp = core.std.Interleave([mergeS, cwarpS])
 out.set_output()
-
-
-#17342
