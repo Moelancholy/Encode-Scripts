@@ -96,7 +96,7 @@ amazon = core.ffms2.Source(source=r"C:\Users\twint\Desktop\Dynazenon\amazon\SSSS
 amazon =depth(amazon, 16)
 
 shader = r"C:\Users\twint\AppData\Roaming\mpv\shaders\FSRCNNX_x2_56-16-4-1.glsl"
-#descale_args = dict(height=720, kernel=lvf.kernels.Bicubic(0, 1/2))
+descale_args = dict(height=720, kernel=lvf.kernels.Bicubic(0, 1/2))
 weak_deband_args = dict(radius=16, threshold=40, grain=0) 
 strong_deband_args = dict(iterations=4, threshold=[4.5, 5.0, 5.0], grain=[1, 0, 0],  radius=18)
 
