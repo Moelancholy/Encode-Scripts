@@ -38,11 +38,11 @@ def average_resize(clip, w=None, h=None):
 
 
 
-def nnedi3_rpow2(clip): return clip.std.Transpose().nnedi3.nnedi3(0,1,0,0,4,2,0,1).std.Transpose().nnedi3.nnedi3(0,1,0,0,4,2,0,1).resize.Bicubic(src_left=.5, src_top=.5)
+def nnedi3_rpow2(clip): return clip.std.Transpose().nnedi3.nnedi3(0,1,0,0,4,2,0,1).std.Transpose().nnedi3.nnedi3(0,1,0,0,4,2,0,1).resize.Spline36(src_left=.5, src_top=.5)
 
 
 
-def eedi3s(clip, field=0, alpha=0.125, beta=0.25, gamma=40, nrad=2, mdis=20, vcheck=2, vthresh0=12, vthresh1=24, vthresh2=4, mclip=None): 
+def eedi3s(clip, field=0, alpha=0.125, beta=0.25, gamma=70, nrad=2, mdis=20, vcheck=2, vthresh0=12, vthresh1=24, vthresh2=4, mclip=None): 
     out = clip.eedi3m.EEDI3(field, False, 0, alpha, beta, gamma, nrad, mdis, vcheck=vcheck, vthresh0=vthresh0, vthresh1=vthresh1, vthresh2=vthresh2, sclip=clip, mclip=mclip)
     if mclip is not None:
         return core.std.Expr([mclip, out, clip], 'x y z ?')
@@ -88,9 +88,13 @@ waka = depth(waka, 16)
 amazon = core.ffms2.Source(source=r"C:\Users\twint\Desktop\Megalo\05\Nomad - Megalo Box 2 - 05 (Amazon Prime CBR 1080p).mkv")
 amazon = depth(amazon, 16)
 
+shader = r"C:\Users\twint\AppData\Roaming\mpv\shaders\FSRCNNX_x2_56-16-4-1.glsl"
+
 
 ###SCENEFILTER
 #opstart = 1155 #first frame with any shit thats not black
+edstart = 32486 #first frame after hasta ver la luz
+edranges = [(edstart, edstart+2056)]
 hardsubs_GTFO_ranges = [(1282, 1381), (1906, 1962), (2720, 2865), (3214, 3308), (7163, 7270), (32085, 32162)]
 
 
@@ -110,20 +114,47 @@ bb = core.edgefixer.ContinuityFixer(fb, 2, 2, 2, 2, 1080)
 bb32 = depth(bb, 32)
 
 
-###DENOISE AND SCALE
+###SCALE
 chromadn = core.knlm.KNLMeansCL(bb, h=0.55, a=3, d=2, s=3, device_type='gpu', device_id=0, channels='UV')
 descale1 = core.descale.Debicubic(get_y(bb32), 1280, 720, 1/3, 1/3)
-descale = depth(descale1, 16)
+descale2 = depth(descale1, 16)
+
+sd_descale = lvf.scale.descale(descale1, upscaler=None, height=406, kernel=lvf.kernels.Spline16())
+sd_descale = depth(sd_descale, 16)
+sd_rescale = vdf.fsrcnnx_upscale(sd_descale, height = sd_descale.height *2, downscaler=None, shader_file=shader, profile = 'zastin')
+sd_upscale = sd_descale.resize.Bicubic(sd_rescale.width, sd_rescale.height)
+merge_mask = sd_rescale.std.Prewitt().std.Binarize(70 << 6).std.Maximum().rgvs.RemoveGrain(20)
+sd_rescale = core.std.MaskedMerge(sd_rescale, core.std.Merge(sd_rescale, sd_upscale, 0.5), merge_mask)
+sd_rescale2 = core.resize.Bicubic(sd_rescale, 1280, 720)
+
+
+###AA
+rescale = nnedi3_rpow2(sd_rescale)
+rescale = rescale.resize.Bicubic(2560, 1440)
+mask = sd_rescale2.std.Prewitt().std.Binarize(60 << 8).std.Maximum().rgvs.RemoveGrain(20)
+aa_mask = mask.std.Convolution([1]*9)
+mclip = average_resize(mask, rescale.width, rescale.height)
+fsr = rescale.std.Transpose()
+
+aa = eedi3s(get_y(fsr), mclip=mclip.std.Transpose())
+aa = aa.std.Transpose()
+aa = eedi3s(aa, mclip=mclip)
+aa = aa.resize.Bicubic(width=1280, height=720)
+
+aa = sd_rescale2.std.MaskedMerge(aa, aa_mask)
+aa = core.rgvs.Repair(aa, sd_rescale2, 13)
+sd_replace = lvf.rfs(aa, descale2, edranges)
+
+
+###MASK 1080 ELEMENTS
 downscale = core.resize.Bicubic(get_y(bb), 1280, 720)
-errorscale = descale1.resize.Bilinear(1920, 1080)
-
-line_m =kgf.retinex_edgemask(downscale).std.Binarize(60<<8).std.Minimum()
-descale = core.std.MaskedMerge(downscale, descale, line_m)
-
+errorscale = descale1.resize.Bicubic(1920, 1080)
 abs_error_m = lvf.scale.descale_detail_mask(clip = bb32, rescaled_clip = errorscale).resize.Bicubic(320, 180).std.Inflate().std.Maximum().std.Inflate().std.Maximum().std.Inflate().std.Maximum().std.Inflate().std.Maximum().std.Convolution([4]*9)
-abs_error_m =depth(abs_error_m, 16).resize.Bicubic(1280, 720)
-luma = core.std.MaskedMerge(descale, downscale, abs_error_m)
+abs_error_m = depth(abs_error_m, 16).resize.Bicubic(1280, 720)
+luma = core.std.MaskedMerge(sd_replace, downscale, abs_error_m)
 
+
+###MASKS
 ed_gray = core.std.ShufflePlanes(luma, 0, vs.GRAY)
 rmask = debandshit.rangemask(ed_gray, 2, 2)
 emask = ed_gray.std.Prewitt()
@@ -140,41 +171,18 @@ texture_mask = weighted.std.BoxBlur(hradius=8,vradius=8).std.Expr(f'x {65535 * 0
 detail_mask = lvf.mask.detail_mask(luma, brz_a=3000, brz_b=2500)
 based_mask = core.std.Expr([detail_mask, texture_mask], 'x y +')
 
-ref = haf.SMDegrain(luma, tr=2, RefineMotion=True, thSAD=120)
-dnluma = mvf.BM3D(luma, ref=ref, sigma=0.5, profile1="fast", radius1=2)
-dnluma = core.std.MaskedMerge(dnluma, luma, detail_mask)
-dnluma = haf.ContraSharpening(dnluma, luma)
-
 
 ###DEHALO
-darken = haf.FastLineDarkenMOD(dnluma, strength=12)
-dering = haf.EdgeCleaner(darken, 15, smode=1, hot=True)
+dering = haf.EdgeCleaner(luma, 10, smode=1, hot=True)
 dhmask = haf.HQDeringmod(dering, show=True)
 dh = gf.MaskedDHA(dering, rx=2.0, ry=2.0, darkstr=0.20, brightstr=1.0, maskpull=0, maskpush=60)
 dh = core.std.MaskedMerge(dering, dh, dhmask)
 
 
-###AA
-rescale = nnedi3_rpow2(dh)
-aawidth, aaheight = 2560, 1440
-
-mask = dh.std.Prewitt().std.Binarize(60 << 8).std.Maximum().rgvs.RemoveGrain(20)
-aa_mask = mask.std.Convolution([1]*9)
-mclip = average_resize(mask, aawidth, aaheight)
-fsr = rescale.std.Transpose()
-
-aa = eedi3s(get_y(fsr), mclip=mclip.std.Transpose())
-aa = aa.std.Transpose()
-aa = eedi3s(aa, mclip=mclip)
-aa = aa.resize.Bicubic(width=1280, height=720)
-aa = dh.std.MaskedMerge(aa, aa_mask)
-aa = core.rgvs.Repair(aa, dh, 13)
-
-
 ###MERGE
 plane_u = core.resize.Bicubic(plane(chromadn, 1), 1280, 720, src_left=.25)
 plane_v = core.resize.Bicubic(plane(chromadn, 2), 1280, 720, src_left=.25)
-merge = join([aa, plane_u, plane_v])
+merge = join([dh, plane_u, plane_v])
 cwarp = xvs.WarpFixChromaBlend(merge, thresh=80)
 
 
@@ -184,9 +192,8 @@ db = core.std.MaskedMerge(db, cwarp, based_mask)
 
 
 ##GRAIN
-grain = adptvgrnMod(db, strength=0.15, size=1.20, luma_scaling=8, sharp=80, static=True, lo=19, hi=[200, 240, 240])
-grain = adptvgrnMod(grain, strength=0.10, size=1.20, luma_scaling=4, sharp=80, static=False, lo=19, hi=[200, 240, 240])
-#upscalecomp = core.resize.Spline36(grain, 1920, 1080)
+grain = adptvgrnMod(db, strength=0.10, size=1.20, luma_scaling=8, sharp=80, static=True, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(grain, strength=0.08, size=1.20, luma_scaling=4, sharp=80, static=False, lo=19, hi=[200, 240, 240])
 
 
 ###COMP
@@ -196,5 +203,5 @@ grain = adptvgrnMod(grain, strength=0.10, size=1.20, luma_scaling=4, sharp=80, s
 
 ###OUTPUT
 out = depth(grain, 10)
-#comp = core.std.Interleave([org, flt])
+#comp = core.std.Interleave([sd_rescale2, aa])
 out.set_output()
