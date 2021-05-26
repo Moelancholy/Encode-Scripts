@@ -18,7 +18,8 @@ from rektlvl import rektlvls
 from vsutil import *
 
 core = vs.core
-core.max_cache_size = 1024 * 64
+core.max_cache_size = 1024 * 48
+core.num_threads = 8
 
 
 
@@ -81,7 +82,7 @@ descale1 = core.descale.Debicubic(get_y(bb32), 1280, 720, 1/3, 1/3)
 descale2 = depth(descale1, 16)
 errorscale = core.resize.Bicubic(descale1, 1920, 1080, filter_param_a = 1/3, filter_param_b = 1/3)
 
-ec_ds = haf.EdgeCleaner(descale2, 8, smode=1, hot=True, rmode=13)
+ec_ds = haf.EdgeCleaner(descale2, 10, smode=1, hot=True, rmode=13)
 rescale = vdf.fsrcnnx_upscale(ec_ds, shader_file=shader, profile = 'zastin', downscaler=None)
 rescale = rescale.resize.Bicubic(1920, 1080)
 
@@ -108,7 +109,7 @@ merge_scale_dsmasked_ep = core.std.MaskedMerge(rescale, dering, abs_error_m)
 merge_scale_dsmasked_ed  = core.std.MaskedMerge(rescale, dering, abs_error_m_ED)
 
 merge_ed = lvf.rfs(merge_scale_dsmasked_ep, merge_scale_dsmasked_ed, ed_ranges)
-ec = haf.EdgeCleaner(merge_ed, 5, smode=1, hot=True, rmode=13)
+ec = haf.EdgeCleaner(merge_ed, 6, smode=1, hot=True, rmode=13)
 ec = core.std.MaskedMerge(merge_ed, ec, line_m)
 
 
@@ -131,26 +132,28 @@ texture_mask = weighted.std.BoxBlur(hradius=8,vradius=8).std.Expr(f'x {65535 * 0
 detail_mask = lvf.mask.detail_mask(bb, brz_a=3000, brz_b=2500)
 luma_mask = core.adg.Mask(bb.std.PlaneStats(), luma_scaling=9)
 
-dn_weak = mvf.BM3D(ec, ref=ref, sigma=0.53, profile1="lc", radius1=2)
-dn_strong = mvf.BM3D(ec, ref=ref, sigma=0.72, profile1="lc", radius1=2)
+dn_weak = mvf.BM3D(ec, ref=ref, sigma=0.52, profile1="lc", radius1=2)
+dn_strong = mvf.BM3D(ec, ref=ref, sigma=0.74, profile1="lc", radius1=2)
 dn1 = core.std.MaskedMerge(dn_strong, dn_weak, luma_mask)
 dn2 = core.std.MaskedMerge(dn1, ec, line_m1)
+decsiz = vdf.decsiz(dn2, sigmaS=4, min_in=208 << 8, max_in=232 << 8)
 
 
 ###DEBAND
-merge_final = join([dn2, plane(chromadn, 1), plane(chromadn, 2)])
+merge_final = join([decsiz, plane(chromadn, 1), plane(chromadn, 2)])
 dbmask = core.std.Expr([texture_mask, detail_mask, line_m], 'x y z + +')
 
-weakdb = vdf.dumb3kdb(merge_final, radius=16, threshold=[40, 70, 70], grain=0)
+weakdb = vdf.dumb3kdb(merge_final, radius=16, threshold=[38, 70, 70], grain=0)
 strongdb = placebo.deband(merge_final, radius = 17, threshold=[4.6, 5.5, 5.5], grain=[2.5, 0, 0])
 db1 = core.std.MaskedMerge(weakdb, strongdb, luma_mask)
 db2 = core.std.MaskedMerge(db1, merge_final, dbmask)
 
 
 ###OUTPUT
-grain = adptvgrnMod(db2, strength=0.08, size=1.00, luma_scaling=3, sharp=75, static=True, lo=19, hi=[200, 240, 240])
-grain = adptvgrnMod(db2, strength=0.11, size=1.00, luma_scaling=11, sharp=75, static=False, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(db2, strength=0.1, size=1.20, luma_scaling=3, sharp=80, static=True, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(db2, strength=0.28, size=1.20, luma_scaling=4, sharp=80, static=False, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(db2, strength=0.20, size=1.20, luma_scaling=30, sharp=80, static=False, lo=19, hi=[200, 240, 240])
 
 final = depth(grain, 10)
-#comp = core.std.Interleave([src, grain])
+#comp = core.std.Interleave([dn2, decsiz])
 final.set_output()
