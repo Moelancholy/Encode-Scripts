@@ -4,18 +4,18 @@ from functools import partial
 
 import awsmfunc as awf
 import debandshit
-import fvsfunc as fvf
+import G41Fun as gf
 import havsfunc as haf
 import kagefunc as kgf
 import lvsfunc as lvf
 import mvsfunc as mvf
+import placebo
 import vardefunc as vdf
-import vsutil
+import zzfunc as zzf
 
 from adptvgrnMod import adptvgrnMod
-from finedehalo import fine_dehalo
 from rektlvl import rektlvls
-from vsutil import get_y, join, plane
+from vsutil import *
 
 core = vs.core
 core.max_cache_size = 1024 * 64
@@ -54,12 +54,12 @@ def LevelsM(clip, points, levels, xpass=[0, 'peak'], return_expr=False):
 
 ###STUFF
 src = core.lsmas.LWLibavSource(source=r"E:\Anime\花牌情缘／ちはやふる\CHIHAYAFURU_1\BDMV\STREAM\00003.m2ts")
-src = fvf.Depth(src, 16)
+src = depth(src, 16)
 
 shader = r"C:\Users\twint\AppData\Roaming\mpv\shaders\FSRCNNX_x2_56-16-4-1.glsl"
-descale_args = dict(height=720, kernel=lvf.kernels.Bicubic(1/3, 1/3))
 
 ###SCENEFILTER
+op_ranges = []
 ed_ranges = [(30810, 32519)]
 
 
@@ -73,66 +73,84 @@ bb2 = awf.bbmod(fb2, top=5, bottom=5, right=0, left=0, thresh=180, blur=999)
 bb2 = core.std.AddBorders(bb2, 0, 0, 90, 90)
 
 bb = lvf.rfs(bb1, bb2, ed_ranges)
-bb32 = fvf.Depth(bb, 32)
+bb32 = depth(bb, 32)
 
 ###RESCALE (NCs don't align with this OP ver, so error mask was used instead of credit mask)
-descale = lvf.scale.descale(get_y(bb32), upscaler=None, **descale_args)
-descale = fvf.Depth(descale, 16)
+chromadn = core.knlm.KNLMeansCL(bb, h=0.6, a=3, d=2, s=3, device_type='gpu', device_id=0, channels='UV')
+descale1 = core.descale.Debicubic(get_y(bb32), 1280, 720, 1/3, 1/3)
+descale2 = depth(descale1, 16)
+errorscale = core.resize.Bicubic(descale1, 1920, 1080, filter_param_a = 1/3, filter_param_b = 1/3)
 
-descale_m = lvf.scale.descale(get_y(bb32), show_mask=True, **descale_args)
-descale_m = vsutil.iterate(descale_m, core.std.Inflate, 25) #yes, really
-descale_m = vsutil.iterate(descale_m, core.std.Maximum, 25) #the fucking titles introduce halos out the ass otherwise. this is something someone willing to put more effort than me can fix
-descale_m = descale_m.std.Convolution([4]*9)
-descale_m = fvf.Depth(descale_m, 16)
+ec_ds = haf.EdgeCleaner(descale2, 8, smode=1, hot=True, rmode=13)
+rescale = vdf.fsrcnnx_upscale(ec_ds, shader_file=shader, profile = 'zastin', downscaler=None)
+rescale = rescale.resize.Bicubic(1920, 1080)
 
-dering = haf.HQDeringmod(bb, mrad=3, msmooth=1) #native 1080 elements look hideous so some derining is needed
 
-rescale = vdf.fsrcnnx_upscale(descale, shader_file=shader, profile = 'zastin')
+###MASKING RESCALE
+abs_error_m = lvf.scale.descale_detail_mask(clip = bb32, rescaled_clip = errorscale).resize.Bicubic(320, 180).std.Inflate().std.Maximum().std.Inflate().std.Maximum().std.Inflate().std.Maximum().std.Inflate().std.Maximum().std.Convolution([4]*9)
+abs_error_m = depth(abs_error_m, 16).resize.Bicubic(1920, 1080)
+abs_error_m = zzf.combine(zzf.shiftframes(abs_error_m, [-6, 6]))
+
+abs_error_m_ED = zzf.combine(zzf.shiftframes(abs_error_m, [-1, 1])).std.Expr('x 257 *', vs.GRAY16)
 edborder1 = kgf.squaremask(rescale, width=1920, height=5, offset_x=0, offset_y=985)
-edborder1 = edborder1.std.Convolution([2]*9)
 edborder2 = kgf.squaremask(rescale, width=1920, height=5, offset_x=0, offset_y=90)
-edborder2 = edborder2.std.Convolution([2]*9)
+abs_error_m_ED = core.std.Expr([edborder1, edborder2, abs_error_m_ED], 'x y z max max').std.Convolution([2]*9)
 
-merge_scale = core.std.MaskedMerge(rescale, get_y(dering), descale_m)
-merge_ed = core.std.MaskedMerge(merge_scale, get_y(bb), edborder1)
-merge_ed = core.std.MaskedMerge(merge_ed, get_y(bb), edborder2)
-merge_scale = lvf.rfs(merge_scale, merge_ed, ed_ranges)
-merge_scale = join([merge_scale, plane(bb, 1), plane(bb,2)])
+dhmask = haf.HQDeringmod(get_y(bb), show=True)
+dh = gf.MaskedDHA(get_y(bb), rx=1.8, ry=1.8, darkstr=0.00, brightstr=0.8, maskpull=35, maskpush=140)
+dh = core.std.MaskedMerge(get_y(bb), dh, dhmask)
+dering = haf.EdgeCleaner(dh, 12, smode=1, hot=True, rmode=13)
+
+line_m1 = kgf.retinex_edgemask(get_y(bb)).std.Maximum().std.Minimum()
+line_m = line_m1.std.Binarize(70<<7).rgvs.RemoveGrain(20).std.Convolution([4]*9)
+merge_scale = core.std.MaskedMerge(get_y(bb), rescale, line_m)
+merge_scale_dsmasked_ep = core.std.MaskedMerge(rescale, dering, abs_error_m)
+merge_scale_dsmasked_ed  = core.std.MaskedMerge(rescale, dering, abs_error_m_ED)
+
+merge_ed = lvf.rfs(merge_scale_dsmasked_ep, merge_scale_dsmasked_ed, ed_ranges)
+ec = haf.EdgeCleaner(merge_ed, 5, smode=1, hot=True, rmode=13)
+ec = core.std.MaskedMerge(merge_ed, ec, line_m)
 
 
 ###DENOISE
-ref = haf.SMDegrain(merge_scale, tr=3, prefilter=3, search=3, contrasharp=True, RefineMotion=True, thSAD=150)
-dn = mvf.BM3D(merge_scale, ref=ref, sigma=1.1, profile1="fast", radius1=1)
+ref = haf.SMDegrain(ec, tr=3, prefilter=3, search=3, RefineMotion=True, thSAD=100)
 
-
-###MASKS
-detail_mask = lvf.denoise.detail_mask(dn, brz_a=3000, brz_b=2500)
-
-ed_gray = core.std.ShufflePlanes(dn, 0, vs.GRAY)
+ed_gray = core.std.ShufflePlanes(ref, 0, vs.GRAY)
 rmask = debandshit.rangemask(ed_gray, 2, 2)
 emask = ed_gray.std.Prewitt()
-
 em_hi = emask.std.Binarize(60 * 257, v0=65535, v1=0)
-em_hi = vsutil.iterate(em_hi, core.std.Minimum, 5)
+em_hi = iterate(em_hi, core.std.Minimum, 5)
 em_me = emask.std.Binarize(40 * 257, v0=65535, v1=0)
-em_me = vsutil.iterate(em_me, core.std.Minimum, 4)
+em_me = iterate(em_me, core.std.Minimum, 4)
 em_lo = emask.std.Binarize(20 * 257, v0=65535, v1=0)
-em_lo = vsutil.iterate(em_lo, core.std.Minimum, 2)
+em_lo = iterate(em_lo, core.std.Minimum, 2)
 rm_txt = core.std.Expr([rmask, em_hi, em_me, em_lo], 'x y z a min min min')
-
 weighted = LevelsM(rm_txt, points=[x *256 for x in (1.75, 2.5, 5, 10)], levels=[0, 1, 1, 0], xpass=[0,0], return_expr=0)
+
 texture_mask = weighted.std.BoxBlur(hradius=8,vradius=8).std.Expr(f'x {65535 * 0.2} - {1 / (1 - 0.2)} *')
+detail_mask = lvf.mask.detail_mask(bb, brz_a=3000, brz_b=2500)
+luma_mask = core.adg.Mask(bb.std.PlaneStats(), luma_scaling=9)
+
+dn_weak = mvf.BM3D(ec, ref=ref, sigma=0.53, profile1="lc", radius1=2)
+dn_strong = mvf.BM3D(ec, ref=ref, sigma=0.72, profile1="lc", radius1=2)
+dn1 = core.std.MaskedMerge(dn_strong, dn_weak, luma_mask)
+dn2 = core.std.MaskedMerge(dn1, ec, line_m1)
 
 
 ###DEBAND
-altdb = core.placebo.Deband(dn, planes = 1, iterations = 4, threshold = 4.2, radius = 18.0, grain = 1.0, dither = True, dither_algo = 0)
-altdb = core.placebo.Deband(altdb, planes = 2|4, iterations = 2, threshold = 4.0, radius = 18.0, grain = 0.0, dither = True, dither_algo = 0)
-altdb = core.std.MaskedMerge(altdb, merge_scale, texture_mask)
-altdb = core.std.MaskedMerge(altdb, merge_scale, detail_mask)
+merge_final = join([dn2, plane(chromadn, 1), plane(chromadn, 2)])
+dbmask = core.std.Expr([texture_mask, detail_mask, line_m], 'x y z + +')
+
+weakdb = vdf.dumb3kdb(merge_final, radius=16, threshold=[40, 70, 70], grain=0)
+strongdb = placebo.deband(merge_final, radius = 17, threshold=[4.6, 5.5, 5.5], grain=[2.5, 0, 0])
+db1 = core.std.MaskedMerge(weakdb, strongdb, luma_mask)
+db2 = core.std.MaskedMerge(db1, merge_final, dbmask)
 
 
 ###OUTPUT
-out = adptvgrnMod(altdb, strength=0.2, size=1.00, luma_scaling=8, sharp=70, static=True, lo=19)
-final = fvf.Depth(out, 10)
-#comp = core.std.Interleave([src, out])
+grain = adptvgrnMod(db2, strength=0.08, size=1.00, luma_scaling=3, sharp=75, static=True, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(db2, strength=0.11, size=1.00, luma_scaling=11, sharp=75, static=False, lo=19, hi=[200, 240, 240])
+
+final = depth(grain, 10)
+#comp = core.std.Interleave([src, grain])
 final.set_output()
