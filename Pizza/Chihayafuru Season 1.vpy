@@ -150,9 +150,9 @@ db2 = core.std.MaskedMerge(db1, merge_final, dbmask)
 
 
 ###OUTPUT
-grain = adptvgrnMod(db2, strength=0.1, size=1.20, luma_scaling=3, sharp=80, static=True, lo=19, hi=[200, 240, 240])
-grain = adptvgrnMod(db2, strength=0.28, size=1.20, luma_scaling=4, sharp=80, static=False, lo=19, hi=[200, 240, 240])
-grain = adptvgrnMod(db2, strength=0.20, size=1.20, luma_scaling=30, sharp=80, static=False, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(db2, strength=0.09, size=1.20, luma_scaling=3, sharp=80, static=True, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(grain, strength=0.20, size=1.20, luma_scaling=5, sharp=80, static=False, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(grain, strength=0.10, size=1.20, luma_scaling=50, sharp=80, static=False, lo=19, hi=[200, 240, 240])
 
 final = depth(grain, 10)
 #comp = core.std.Interleave([dn2, decsiz])
