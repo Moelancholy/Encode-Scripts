@@ -131,7 +131,7 @@ weighted = LevelsM(rm_txt, points=[x *256 for x in (1.75, 2.5, 5, 10)], levels=[
 
 texture_mask = weighted.std.BoxBlur(hradius=8,vradius=8).std.Expr(f'x {65535 * 0.2} - {1 / (1 - 0.2)} *')
 detail_mask = lvf.mask.detail_mask(bb, brz_a=3000, brz_b=2500)
-luma_mask = core.adg.Mask(bb.std.PlaneStats(), luma_scaling=9)
+luma_mask = core.adg.Mask(bb.std.PlaneStats(), luma_scaling=12)
 
 dn_weak = mvf.BM3D(ec, ref=ref, sigma=0.52, profile1="lc", radius1=2)
 dn_strong = mvf.BM3D(ec, ref=ref, sigma=0.74, profile1="lc", radius1=2)
@@ -142,20 +142,22 @@ decsiz = vdf.decsiz(dn2, sigmaS=4, min_in=208 << 8, max_in=232 << 8)
 
 ###DEBAND
 merge_final = join([decsiz, plane(chromadn, 1), plane(chromadn, 2)])
-dbmask = core.std.Expr([texture_mask, detail_mask, line_m], 'x y z + +')
+dbmask = core.std.Expr([texture_mask, detail_mask], 'x y +')
 
-weakdb = vdf.dumb3kdb(merge_final, radius=16, threshold=[38, 70, 70], grain=0)
-strongdb = vdf.dumb3kdb(merge_final, radius=16, threshold=[82, 80, 80], grain=0)
+weakdb = vdf.dumb3kdb(merge_final, radius=16, threshold=[42, 69, 69], grain=0)
+strongdb = vdf.dumb3kdb(merge_final, radius=18, threshold=[69, 85, 85], grain=0)
 db1 = core.std.MaskedMerge(weakdb, strongdb, luma_mask)
 db2 = core.std.MaskedMerge(db1, merge_final, dbmask)
 db2 = core.std.MaskedMerge(db2, merge_final, texture_mask)
+db3 = core.std.MaskedMerge(db2, merge_final, line_m1)
+db3 = core.std.Merge(db3, db2, 0.5)
 
 
 ###OUTPUT
-grain = adptvgrnMod(db2, strength=0.11, size=1.20, luma_scaling=4, sharp=75, static=True, lo=19, hi=[200, 240, 240])
-grain = adptvgrnMod(db2, strength=0.16, size=1.20, luma_scaling=6, sharp=75, static=False, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(db3, strength=0.13, size=1.20, luma_scaling=4, sharp=75, static=True, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(grain, strength=0.14, size=1.20, luma_scaling=10, sharp=75, static=False, lo=19, hi=[200, 240, 240])
 
 
 final = depth(grain, 10)
-#comp = core.std.Interleave([dn2, decsiz])
+comp = core.std.Interleave([src, grain])
 final.set_output()
