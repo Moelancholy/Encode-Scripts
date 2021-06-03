@@ -15,12 +15,13 @@ import zzfunc as zzf
 
 from adptvgrnMod import adptvgrnMod
 from rektlvl import rektlvls
+from typing import List, Tuple
 from vsutil import *
 
 core = vs.core
 core.max_cache_size = 1024 * 48
 core.num_threads = 8
-
+    
 
 
 def LevelsM(clip, points, levels, xpass=[0, 'peak'], return_expr=False):
@@ -77,7 +78,7 @@ bb = lvf.rfs(bb1, bb2, ed_ranges)
 bb32 = depth(bb, 32)
 
 ###RESCALE (NCs don't align with this OP ver, so error mask was used instead of credit mask)
-chromadn = core.knlm.KNLMeansCL(bb, h=0.6, a=3, d=2, s=3, device_type='gpu', device_id=0, channels='UV')
+chromadn = core.knlm.KNLMeansCL(bb, h=0.5, a=3, d=2, s=3, device_type='gpu', device_id=0, channels='UV')
 descale1 = core.descale.Debicubic(get_y(bb32), 1280, 720, 1/3, 1/3)
 descale2 = depth(descale1, 16)
 errorscale = core.resize.Bicubic(descale1, 1920, 1080, filter_param_a = 1/3, filter_param_b = 1/3)
@@ -144,15 +145,16 @@ merge_final = join([decsiz, plane(chromadn, 1), plane(chromadn, 2)])
 dbmask = core.std.Expr([texture_mask, detail_mask, line_m], 'x y z + +')
 
 weakdb = vdf.dumb3kdb(merge_final, radius=16, threshold=[38, 70, 70], grain=0)
-strongdb = placebo.deband(merge_final, radius = 17, threshold=[4.6, 5.5, 5.5], grain=[2.5, 0, 0])
+strongdb = vdf.dumb3kdb(merge_final, radius=16, threshold=[82, 80, 80], grain=0)
 db1 = core.std.MaskedMerge(weakdb, strongdb, luma_mask)
 db2 = core.std.MaskedMerge(db1, merge_final, dbmask)
+db2 = core.std.MaskedMerge(db2, merge_final, texture_mask)
 
 
 ###OUTPUT
-grain = adptvgrnMod(db2, strength=0.09, size=1.20, luma_scaling=3, sharp=80, static=True, lo=19, hi=[200, 240, 240])
-grain = adptvgrnMod(grain, strength=0.20, size=1.20, luma_scaling=5, sharp=80, static=False, lo=19, hi=[200, 240, 240])
-grain = adptvgrnMod(grain, strength=0.10, size=1.20, luma_scaling=50, sharp=80, static=False, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(db2, strength=0.11, size=1.20, luma_scaling=4, sharp=75, static=True, lo=19, hi=[200, 240, 240])
+grain = adptvgrnMod(db2, strength=0.16, size=1.20, luma_scaling=6, sharp=75, static=False, lo=19, hi=[200, 240, 240])
+
 
 final = depth(grain, 10)
 #comp = core.std.Interleave([dn2, decsiz])
