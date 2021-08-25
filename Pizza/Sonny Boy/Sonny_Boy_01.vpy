@@ -14,87 +14,9 @@ core = vs.core
 
 
 
-
-###STUFF
-def LevelsM(clip, points, levels, xpass=[0, 'peak'], return_expr=False):
-    qm = len(points)
-    peak = [(1 << clip.format.bits_per_sample) - 1, 1][clip.format.sample_type]
-   
-    if len(set(xpass)) == 1:
-        expr = f'x {points[0]} < x {points[-1]} > or {xpass[0]} '
-        qm -= 1
-    else:
-        expr = f'x {points[0]} < {xpass[0]} x {points[-1]} > {xpass[-1]} '
-   
-    for x in range(len(points) - 1):
-        if points[x+1] < points[-1]:
-            expr += f' x {points[x+1]} <= '
-        if levels[x] == levels[x+1]:
-            expr += f' {peak * levels[x]} '
-        else:
-            expr += f' x {points[x]} - {peak * (levels[x+1] - levels[x])/(points[x+1] - points[x])} * {peak * levels[x]} + '
-   
-    for _ in range(qm):
-        expr += ' ? '
-   
-    expr = expr.replace('  ', ' ').replace('peak', f'{peak}')
-   
-    if return_expr:
-        return expr
-   
-    return clip.std.Expr(expr)
-
-
-
-def maxm(clip: vs.VideoNode, sy: int = 2, sc: int = 2) -> vs.VideoNode:
-    yp = sy>=sc
-    yiter = 1 if yp else 0
-    cp = sc>=sy
-    citer = 1 if cp else 0
-    planes = [0] if yp and not cp else [1,2] if cp and not yp else [0,1,2]
-    coor = [0, 1, 0, 1, 1, 0, 1, 0] if (max(sy,sc) % 3) != 1 else [1] * 8
-
-    if sy>0 or sc>0:
-        return maxm(clip.std.Maximum(planes=planes, coordinates=coor), sy=sy-yiter, sc=sc-citer)
-    else:
-        return clip
-
-
-
-def minm(clip: vs.VideoNode, sy: int = 2, sc: int = 2) -> vs.VideoNode:
-    yp = sy>=sc
-    yiter = 1 if yp else 0
-    cp = sc>=sy
-    citer = 1 if cp else 0
-    planes = [0] if yp and not cp else [1,2] if cp and not yp else [0,1,2]
-    coor = [0, 1, 0, 1, 1, 0, 1, 0] if (max(sy,sc) % 3) != 1 else [1] * 8
-
-    if sy>0 or sc>0:
-        return minm(clip.std.Minimum(planes=planes, coordinates=coor), sy=sy-yiter, sc=sc-citer)
-    else:
-        return clip
-
-
-
-def rangemask(clip: vs.VideoNode, rad: int = 2, radc: Optional[int] = None) -> vs.VideoNode:
-    isRGB = clip.format.color_family == vs.RGB
-    radc = (rad if isRGB else 0) if radc is None else radc
-    if radc == 0:
-        clip = togray(clip, int16=False)
-    ma = maxm(clip, rad, radc)
-    mi = minm(clip, rad, radc)
-
-    expr = 'x y -'
-    if not rad:
-        expr = ['', 'x y -']
-    if not radc:
-        expr = ['x y -', '']
-
-    return core.std.Expr([ma, mi], expr)
-
-
-
 ###SCENEFILTER
+edstart = 33795
+
 hardsubs_GTFO_ranges = [
     (240, 281), (7217, 7252), (7348, 7401), 
     (7447, 7503), (13172, 13303), (19263, 19622), 
@@ -104,14 +26,31 @@ hardsubs_GTFO_ranges = [
 
 
 MOVES_LIKE_JAGGED_RANGES = [
+    (6753, 6788), (6882, 6929), (10086, 10232),
+    (14544, 14621), (22707, 22832)
+]
 
+
+
+clamp_ranges = [
+    (5040, 5303), (7014, 7049), (14622, 14699),
+    (18855, 18908), (21363, 21476), (21837, 22097),
+    (22404, 22604), (23211, 23330), (23753, 23805),
+    (23851, 23970), (24670, 24735), (27544, 27714)
 ]
 
 
 
 deband_ranges = [
-
+    (5610, 5642), (18795, 18854)
 ]
+
+
+
+strong_deband_ranges = [
+    (23705, 23752)
+]
+
 
 
 ###SOURCES
@@ -136,26 +75,8 @@ preden = haf.SMDegrain(get_y(dehardsub), tr=2, RefineMotion=True, thSAD=150)
 
 
 
-###MASKS
-ed_gray = core.std.ShufflePlanes(preden, 0, vs.GRAY)
-rmask = rangemask(ed_gray, 2, 2)
-emask = ed_gray.std.Prewitt()
-em_hi = emask.std.Binarize(60 * 257, v0=65535, v1=0)
-em_hi = iterate(em_hi, core.std.Minimum, 5)
-em_me = emask.std.Binarize(40 * 257, v0=65535, v1=0)
-em_me = iterate(em_me, core.std.Minimum, 4)
-em_lo = emask.std.Binarize(20 * 257, v0=65535, v1=0)
-em_lo = iterate(em_lo, core.std.Minimum, 2)
-rm_txt = core.std.Expr([rmask, em_hi, em_me, em_lo], 'x y z a min min min')
-weighted = LevelsM(rm_txt, points=[x *256 for x in (1.75, 2.5, 5, 10)], levels=[0, 1, 1, 0], xpass=[0,0], return_expr=0)
-texture_mask = weighted.std.BoxBlur(hradius=8,vradius=8).std.Expr(f'x {65535 * 0.2} - {1 / (1 - 0.2)} *')
-texture_mask2 = texture_mask.std.Binarize(90<<8)
-
-
-
 ###AA
 upscale =  vdf.scale.fsrcnnx_upscale(get_y(dehardsub), width = 3840, height = 2160, downscaler = None, shader_file=shader, profile = 'zastin')
-downscale = depth(SSIM_downsample(upscale, w = 2560, h = 1440, sigmoid = True), 16)
 aa_mask = vdf.mask.FreyChen().get_mask(preden, lthr=0, multi=1.70).std.Binarize(62<<7).std.Maximum().rgvs.RemoveGrain(20)
 
 weak_aa = depth(SSIM_downsample(upscale, w = 3200, h = 1800, sigmoid = True), 16)
@@ -170,7 +91,12 @@ strong_aa = lvf.aa._eedi3_singlerate(strong_aa).std.Transpose()
 strong_aa = depth(SSIM_downsample(strong_aa, w = 1920, h = 1080, sigmoid = True), 16)
 aa2 = core.std.MaskedMerge(get_y(dehardsub), strong_aa, aa_mask)
 
+nnedi3 = lvf.aa.taa(get_y(dehardsub), lvf.aa.nnedi3(opencl=True))
+aa3 = lvf.aa.clamp_aa(get_y(dehardsub), nnedi3, aa2, strength = 3.0)
+aa3 = core.std.MaskedMerge(get_y(dehardsub), aa3, aa_mask)
+
 aa_y = lvf.rfs(aa1, aa2, MOVES_LIKE_JAGGED_RANGES)
+aa_y = lvf.rfs(aa_y, aa3, clamp_ranges)
 aa = core.std.ShufflePlanes([aa_y, dehardsub], [0, 1, 2], vs.YUV)
 
 
@@ -185,16 +111,24 @@ dering = haf.EdgeCleaner(dehalo, strength = 6, rep = True, rmode = 13, smode = 1
 preden2 = haf.SMDegrain(dering, tr=2, RefineMotion=True, thSAD=150)
 deband_mask = kgf.retinex_edgemask(preden2)
 diff = core.std.MakeDiff(dering, preden2)
-deband = debandshit.dumb3kdb(preden2, radius=16, threshold=48, grain=0)
+
+deband = debandshit.dumb3kdb(preden2, radius=16, threshold=40, grain=0)
 deband = core.std.MergeDiff(deband, diff)
 deband = core.std.MaskedMerge(deband, dering, deband_mask)
+
+strong_deband = debandshit.dumb3kdb(preden2, radius=16, threshold=64, grain=0)
+strong_deband = core.std.MergeDiff(strong_deband, diff)
+strong_deband = core.std.MaskedMerge(strong_deband, dering, deband_mask)
+
 flt = lvf.rfs(dering, deband, deband_ranges)
+flt = lvf.rfs(flt, strong_deband, strong_deband_ranges)
+flt = flt[:edstart] + dehardsub[edstart:]
 
 
 ###OUTPUT
 out = depth(flt, 10)
-dehardsub.set_output(0)
-flt.set_output(1)
+out.set_output()
+
 
 
 
