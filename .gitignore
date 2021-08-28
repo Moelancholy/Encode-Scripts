@@ -39,7 +39,7 @@
 *.webm
 *.webp
 *.y4m
-*_yml
+*.yml
 
 
 # VapourSynth & Indexing files
@@ -217,16 +217,3 @@ rename.py
 
 # Ignore lossless files. These are generally used as intermediary files to check temporal consistency or encoding settings.
 *lossless*
-© 2021 GitHub, Inc.
-Terms
-Privacy
-Security
-Status
-Docs
-Contact GitHub
-Pricing
-API
-Training
-Blog
-About
-Loading complete
