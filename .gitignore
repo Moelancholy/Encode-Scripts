@@ -39,6 +39,7 @@
 *.webm
 *.webp
 *.y4m
+*_yml
 
 
 # VapourSynth & Indexing files
