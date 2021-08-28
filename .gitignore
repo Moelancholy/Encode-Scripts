@@ -217,3 +217,4 @@ rename.py
 
 # Ignore lossless files. These are generally used as intermediary files to check temporal consistency or encoding settings.
 *lossless*
+*.yml
