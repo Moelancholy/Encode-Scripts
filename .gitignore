@@ -218,3 +218,6 @@ rename.py
 # Ignore lossless files. These are generally used as intermediary files to check temporal consistency or encoding settings.
 *lossless*
 *.yml
+Pizza/Sonny Boy/.vspreview/Sonny_Boy_01.old2.yml
+Pizza/Sonny Boy/.vspreview/Sonny_Boy_01.old1.yml
+Pizza/Sonny Boy/.vspreview/Sonny_Boy_01.yml
