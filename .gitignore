@@ -1,0 +1,231 @@
+#STOLEN FROM LIGHTARROWSEXE
+  
+# Show-specific
+*EPISODES/
+
+
+# Video, Audio & Picture files
+*.264
+*.265
+*.aac
+*.ac3
+*.bmp
+*.d2v
+*.flac
+*.h264
+*.jpeg
+*.jpg
+*.log
+*.m2ts
+*.m2v
+*.m3u
+*.m3u8
+*.m4a
+*.mka
+*.mks
+*.mkv
+*.mp2
+*.mp3
+*.mp4
+*.opus
+*.png
+*.tif
+*.ts
+*.undefined
+*.usm
+*.vorbis
+*.w64
+*.wav
+*.webm
+*.webp
+*.y4m
+
+
+# VapourSynth & Indexing files
+*.bookmarks
+*.dgi
+*.ffindex
+*.index
+*.lwi
+
+
+# Aegisub files (those get uploaded to the group's specific repositories) & Fonts
+*.ass
+*.autosave
+*.mocha
+*.otf
+*.srt
+*.ttc
+*.ttf
+
+
+# BDMV/DVD files
+*.bdjo
+*.bdmv
+*.bup
+*.cci
+*.cer
+*.clpi
+*.cmap
+*.cue
+*.dat
+*.db
+*.ifo
+*.inf
+*.iso
+*.jar
+*.lst
+*.m2v
+*.mpls
+*.sup
+*.tbl
+*.vob
+*.xml
+
+
+# old files that I don't want to accidentally push
+.old/
+
+
+# Python files
+__pycache__/
+*.egg-info/
+*.py[cod]
+*.pyi
+*$py.class
+
+# Misc
+*.7z
+*.avs
+*.bat
+*.cbz
+*.crt
+*.csv
+*.diff
+*.egg
+*.exe
+*.glsl
+*.html
+*.json
+*.lgd
+*.MDS
+*.midicsv
+*.mscz
+*.mtxcfg
+*.nfo
+*.parts
+*.properties
+*.pth
+*.rar
+*.torrent
+*.txt
+*.url
+*.xcf
+*.xz
+*.yml
+*.zip
+*comp.*py
+*diff.*py
+*fix.*py
+*patch.*py
+*sakuga.*py
+*sakuga*.*py
+*temp.*py
+*test.*py
+*wraw.*py
+authorized_keys
+BDMV
+midicsv2ass
+
+
+# Utility Scripts
+auto-audiocutter.py
+auto-CRC.py
+clean_dir.py
+clean-enc-dir.py
+encode_audio.py
+encode_audiov2.py
+extract_audio.py
+generate_keyframes.py
+hardsub.py
+indexer.py
+QC.py
+remux.py
+rename.py
+
+
+# Symlinks with [Vol.#] at the end
+*.1]
+*.2]
+*.3]
+*.4]
+*.5]
+*.6]
+*.7]
+*.8]
+*.9]
+*.10]
+*.11]
+*.12]
+*.13]
+*.14]
+*.15]
+*.16]
+*.17]
+*.18]
+*.19]
+*.20]
+*.21]
+*.22]
+*.23]
+*.24]
+*.25]
+*.26]
+*.27]
+*.28]
+*.29]
+*.30]
+
+
+# Exceptions
+!settings
+!requirements.txt
+
+# Exceptions to the exceptions
+*.lnk
+
+
+# Ignored project directories.
+# These usually were uploaded at some point, but hidden because of various reasons,
+# ranging from them being basically empty, discontinued, horribly breaking some things, etc.
+# If you want to see the files in actions, check the commit history of this file.
+
+
+
+# Ignoring a temp archival directory. Git annoyingly keeps bugging me about them, so I'm ignoring scripts/projects I haven't touched in a long time here.
+\!temp_archiving
+
+
+# A suffix for directories I want to temporarily prevent from being accidentally pushed
+*_hidden
+
+
+# There is a good reason for this (no, there is not, besides annoyance)
+*.crdownload
+
+
+# Ignore lossless files. These are generally used as intermediary files to check temporal consistency or encoding settings.
+*lossless*
+© 2021 GitHub, Inc.
+Terms
+Privacy
+Security
+Status
+Docs
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About
+Loading complete
