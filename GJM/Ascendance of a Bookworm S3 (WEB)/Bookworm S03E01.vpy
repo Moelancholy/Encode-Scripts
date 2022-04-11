@@ -141,8 +141,8 @@ def CCD_denoise(clip: vs.VideoNode, strength):
 
 
 ###SCENEFILTER
-opstart = 0 #+2277 is first frame with no masking needed
-edstart = 30833 #gonna not try to nail down the frame here as there are special end of season things with 1080 shit and this a template
+opstart = 0 
+edstart = 30833 
 guest_drawing = 33926
 eyecatch = 17910
 
@@ -188,7 +188,6 @@ aamask2 = mask.FreyChen().get_mask(preden1).std.Binarize(40<<7)
 aamask3 = mask.FreyChen().get_mask(preden1).std.Binarize(80<<7)
 aamaskweak = core.std.Expr([aamask2, aamask3, aamask1], f"x 0.8 * y + 1.8 / 0.3 z * +").std.Maximum().std.Inflate().std.Inflate()
 aamaskweak = average_resize(aamaskweak, src.width, src.height)
-aamaskstrong = mask.FreyChen().get_mask(preden1).std.Binarize(105<<7).std.Maximum().std.Inflate().std.Inflate()
 
 rescale = merged_doubler(denoise3, shader, fsrcnnx_str = 0.62, nnedi_str = 0.38, radius = 2, sharpen = 40)
 strongaa = lvf.sraa(rescale, 1, rescale.width, rescale.height, downscaler = None)
@@ -267,12 +266,3 @@ out = depth(grain, 10)
 #src.set_output(1)
 #deband_masked.set_output(2)
 out.set_output()
-#denoise_masked_luma.set_output(4)
-#denoise3.set_output(5)
-#compare.set_output(6)
-#debandmask.set_output(7)
-#debandmask2.set_output(8)
-#test2.set_output(5)
-
-#16481
-#28996
