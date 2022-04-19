@@ -261,7 +261,7 @@ strong_deband_masked = core.std.MaskedMerge(medium_deband, denoise_masked, deban
 
 #deband_masked = manual_masking(deband_masked, strong_deband, start = 16422, end = 16481, image_path = darkhouse)
 #deband_masked = manual_masking(deband_masked, strong_deband, start = 28974, end = 29021, image_path = darkhouse)
-debandmasked = lvf.rfs(deband_masked, strong_deband_masked, strong_deband_ranges)
+deband_masked = lvf.rfs(deband_masked, strong_deband_masked, strong_deband_ranges)
 
 
 
