@@ -1,4 +1,3 @@
-from turtle import down
 import vapoursynth as vs
 
 
@@ -6,20 +5,14 @@ core = vs.core
 
 
 import debandshit as dbs
-import lvsfunc as lvf
 import vardefunc.mask as mask
 
-from adptvgrnMod import adptvgrnMod, sizedgrn
-from functools import partial
+from adptvgrnMod import adptvgrnMod
 from kagefunc import retinex_edgemask
-from lvsfunc.scale import descale_detail_mask
 from havsfunc import SMDegrain
-from math import ceil
 from muvsfunc import SSIM_downsample
-from thresholding import thresholding, Thresholds
-from vardefunc.scale import fsrcnnx_upscale, nnedi3cl_double, to_444
-from vardefunc.sharp import z4usm
-from vsutil import get_depth, get_w, get_y, depth, iterate, fallback
+from vardefunc.scale import nnedi3cl_double, to_444
+from vsutil import get_depth, get_w, get_y, depth, iterate
 
 
 ###CUSTOM FUNCS
@@ -127,21 +120,15 @@ dn_masked = core.std.MaskedMerge(cden2, aa_merged, tmask).std.MaskedMerge(aa_mer
 ###DEBAND
 deband = dbs.dumb3kdb(dn_masked, radius = 17, threshold = [35, 30, 30], grain = 0)
 debandgrained = adptvgrnMod(deband, strength = 0.05, static = True, luma_scaling = 4, grain_chroma = False)
-debandgrained = adptvgrnMod(debandgrained, strength = 0.15, static = False, luma_scaling = 9, grain_chroma = False)
+debandgrained = adptvgrnMod(debandgrained, strength = 0.10, static = False, luma_scaling = 7, grain_chroma = False)
 debandmasked = core.std.MaskedMerge(debandgrained, dn_masked, tmask).std.MaskedMerge(dn_masked, line_mask)
 
 
 ###GRAIN + OUTPUT
 grain = adptvgrnMod(debandgrained, strength = 0.04, static = False, luma_scaling = 2, grain_chroma = False)
-out = depth(grain, 10)
+src16 = depth(src, 16)
 
+splice = src16[:1014] + grain[1014:150000] + src16[150000:]
+out = depth(splice, 10)
 
-#src.set_output(1)
-#dn_masked.set_output(2)
-#debandmasked.set_output(3)
 out.set_output()
-#debandmasked.set_output(5)
-
-
-#124043 chroma denoise
-#126012, 119182 banding
