@@ -195,16 +195,16 @@ flt = flt[:edstart] + dehardsub[edstart:]
 
 ###OUTPUT
 out = depth(flt, 10)
-#out.set_output()
-waka.set_output(1)
-get_y(dehardsub).set_output(2)
-aa1.set_output(3)
-aa2.set_output(4)
-aa3.set_output(5)
-dering.set_output(6)
-deband.set_output(7)
-strong_deband.set_output(8)
-dpir_pass.set_output(9)
+out.set_output()
+#waka.set_output(1)
+#get_y(dehardsub).set_output(2)
+#aa1.set_output(3)
+#aa2.set_output(4)
+#aa3.set_output(5)
+#dering.set_output(6)
+#deband.set_output(7)
+#strong_deband.set_output(8)
+#dpir_pass.set_output(9)
 
 #9705,9780,b=1.1/9849,12282,b=1.1/24581,25351,b=1.3/26240,26515.b=1.2/26924,27079,b=1.2/27080,27990,b=1.1/28045,29350,b=1.1/29351,29511,b=1.3/29512,31607,b=1.1/33087,35244,b=0.8
 #26924
