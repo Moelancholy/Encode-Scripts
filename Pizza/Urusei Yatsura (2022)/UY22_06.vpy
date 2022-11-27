@@ -387,8 +387,6 @@ out = depth(grain, 10)
 
 
 ###OUTPUT
-#out.set_output()
-
 #cbr.set_output(1)
 #vbr.set_output(2)
 #disney.set_output(3)
@@ -406,10 +404,3 @@ out.set_output()
 #core.std.ShufflePlanes([aamedium, episode], [0, 1, 2], vs.YUV).set_output(6)
 #core.std.ShufflePlanes([aastrong, episode], [0, 1, 2], vs.YUV).set_output(7)
 #out.set_output(8)
-
-#grain.set_output(2)
-#grain2.set_output(3)
-
-
-#scenefilter bilisplicing, aa, deband
-#replace sraa
