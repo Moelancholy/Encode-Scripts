@@ -6,7 +6,7 @@ core.num_threads = 12
 
 from havsfunc import SMDegrain
 from muvsfunc import SSIM_downsample
-from vsutil import depth, get_w, plane
+from vsutil import depth
 
 
 ###SOURCE
