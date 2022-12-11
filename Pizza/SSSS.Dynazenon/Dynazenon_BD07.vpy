@@ -1,4 +1,3 @@
-from msilib import OpenDatabase
 import vapoursynth as vs
 
 import awsmfunc as awf
@@ -19,6 +18,11 @@ from thresholding import kimagure_thresholding
 from vardefunc.scale import fsrcnnx_upscale, nnedi3cl_double, to_444
 from vardefunc.sharp import z4usm
 from vsutil import depth, fallback, get_y, get_depth, iterate, get_w
+
+
+core = vs.core
+core.max_cache_size = 42*1024
+core.num_threads = 14
 
 
 
@@ -151,8 +155,8 @@ def CCD_denoise(clip: vs.VideoNode, strength):
 
 
 ###SCENEFILTERING
-edstart = 31603 #first frame washing machine
-edend = 33760 #last frame trigger
+edstart = 31888 #first frame washing machine
+edend = 34045 #last frame trigger
 nced_length = edend - edstart + 1
 
 opstart = 1 #first frame emblem
@@ -164,19 +168,16 @@ native_elements = [
     ]
 
 MOVES_LIKE_JAGGED_RANGES = [
-    (11616, 11795), (28709, 28816)
+    (11616, 11795), (22041, 22262)
 ]
 
 deband_ranges = [
     (opstart+356, opstart+412), (opstart+600, opstart+636),
     (opstart+678, opstart+737), (opstart+784, opstart+825),
     (opstart+1802, opstart+2041), (9187, 9258), (9424, 9477),
-    (15741, 16334), (16388, 16412), (17461, 17723),
-    (18384, 18512), (19437, 19532), (19701, 19844),
-    (19977, 20021), (20165, 20230), (22026, 22133),
-    (22968, 23429), (24222, 24287), (26928, 27083),
-    (27306, 27487), (27532, 27590), (27979, 28119),
-    (28213, 28358), (28709, 29059), (29120, 29203)
+    (15741, 16334), (16388, 16412), (17685, 18008), (19620, 19817),
+    (22041, 22262), (22311, 22418), (23253, 23714), (25732, 25797),
+    (27591, 27648), (29567, 29716), (31697, 31828), 
     ]
 
 nuke_ranges = [
@@ -185,9 +186,7 @@ nuke_ranges = [
 
 
 ###SOURCES
-core = vs.core
-
-src = core.lsmas.LWLibavSource(r"B:\[BDMV][SSSS.DYNAZENON][Vol.1-4]\[PCXP-50863][SSSS_DYNAZENON_3]\BDMV\STREAM\00000.m2ts")
+src = core.lsmas.LWLibavSource(r"B:\[BDMV][SSSS.DYNAZENON][Vol.1-4]\[PCXP-50863][SSSS_DYNAZENON_3]\BDMV\STREAM\please.mkv")
 ncop = core.lsmas.LWLibavSource(r"B:\[BDMV][SSSS.DYNAZENON][Vol.1-4]\[PCXP-50863][SSSS_DYNAZENON_3]\BDMV\STREAM\00010.m2ts")[:ncop_length]
 nced = core.lsmas.LWLibavSource(r"B:\[BDMV][SSSS.DYNAZENON][Vol.1-4]\[PCXP-50862][SSSS_DYNAZENON_2]\BDMV\STREAM\00010.m2ts")[:nced_length]
 src16 = depth(src, 16)
@@ -326,6 +325,9 @@ nuke = adptvgrnMod(nuke, strength = 0.05, static = False, luma_scaling = 7, grai
 
 deband = lvf.rfs(weakdeband, strongdeband, deband_ranges)
 deband = lvf.rfs(deband, nuke, nuke_ranges)
+deband = manual_masking(deband, nuke, r"C:\Users\twint\Documents\GitHub\Encode-Scripts\Pizza\SSSS.Dynazenon\masks\ep07_sky2.png", 19886, 20129)
+deband = manual_masking(deband, nuke, r"C:\Users\twint\Documents\GitHub\Encode-Scripts\Pizza\SSSS.Dynazenon\masks\ep07_sky3.png", 24507, 24572)
+
 debandmask = core.std.Expr([rescalemask, tmask], 'x y +')
 debandmasked = core.std.MaskedMerge(deband, edbordersplice, debandmask)
 
@@ -333,13 +335,14 @@ debandmasked = core.std.MaskedMerge(deband, edbordersplice, debandmask)
 ###FIX ED
 dumbmask = squaremask(debandmasked, 952, 1080, 0, 0)
 dumbmasked = core.std.MaskedMerge(debandmasked, src16, dumbmask)
-debandmasked = lvf.rfs(debandmasked, dumbmasked, (32693, 32748))
+debandmasked = lvf.rfs(debandmasked, dumbmasked, (32978, 33033))
 
 
 ###OUTPUT
 grain = adptvgrnMod(debandmasked, strength = 0.06, static = True, luma_scaling = 2, grain_chroma = False, size = 1.2, sharp = 75)
 grain = adptvgrnMod(grain, strength = 0.11, static = False, luma_scaling = 10, grain_chroma = False, size = 1.2, sharp = 75)
 out = depth(grain, 10)
+
 
 out.set_output()
 #src.set_output(1)
@@ -349,5 +352,6 @@ out.set_output()
 #strongdeband.set_output(5)
 #error_mask.set_output(6)
 #nuke.set_output(7)
+#out.set_output(8)
 
-#0,167,b=1.4/291,1203,b=1.1/1204,1465,b=1.3/1466,2157,b=1.1/2834,3025,b=1.3/3323,3635,b=1.3/3837,4176,b=1.3/4621,4797,b=1.2/5032,5518,b=1.1/6349,6645,b=1.2/9898,10412,b=1.1/11796,11897,b=1.2/17461,17723,b=1.1/19335,23711,b=1.1/24222,24368,b=1.1/24976,25128,b=1.3/25867,26037,b=1.3/26254,26564,b=1.2/27306,27590,b=1.2/27823,28119,b=1.2/28213,28707,b=1.3
+#0,167,b=1.4/291,1203,b=1.1/1204,1465,b=1.3/1466,2157,b=1.1/2834,3025,b=1.3/3323,3635,b=1.3/3837,4176,b=1.3/4621,4797,b=1.2/5032,5518,b=1.1/6349,6645,b=1.2/9898,10412,b=1.1/11796,11897,b=1.2/17625,18008,b=1.1/19620,20404,b=1.1/20588,21208,b=1.1/21329,21625,b=1.1/21681,23996,b=1.1/24291,24653,b=1.1/25280,25413,b=1.3/25732,25797,b=1.1/26244,26322,b=1.3/26551,26654,b=1.2/26730,26849,b=1.2/27591,27772,b=1.3/27812,27875,b=1.2/28108,28185,b=1.2/28291,28428,b=1.2/28498,28993,b=1.3/

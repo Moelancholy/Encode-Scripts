@@ -1,4 +1,3 @@
-from msilib import OpenDatabase
 import vapoursynth as vs
 
 import awsmfunc as awf
@@ -20,6 +19,10 @@ from vardefunc.scale import fsrcnnx_upscale, nnedi3cl_double, to_444
 from vardefunc.sharp import z4usm
 from vsutil import depth, fallback, get_y, get_depth, iterate, get_w
 
+
+core = vs.core
+core.max_cache_size = 42*1024
+core.num_threads = 14
 
 
 ###CUSTOM FUNCS
