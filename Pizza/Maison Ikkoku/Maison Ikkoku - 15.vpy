@@ -4,13 +4,14 @@ core = vs.core
 core.max_cache_size = 40*1024
 core.num_threads = 12
 
+from awsmfunc import bbmod
 from havsfunc import SMDegrain
 from muvsfunc import SSIM_downsample
-from vsutil import depth
+from vsutil import depth, get_w, plane
 
 
 ###SOURCE
-src = core.lsmas.LWLibavSource(r"B:\めぞん一刻\MAISON_IKKOKU_01\BDMV\STREAM\00000.m2ts").resize.Point(src_left=1, resample_filter_uv="bicubic").std.Crop(240, 242, 0, 0)
+src = core.lsmas.LWLibavSource(r"E:\Anime\めぞん一刻\MAISON_IKKOKU_03\BDMV\STREAM\00002.m2ts").std.Crop(242, 242, 0, 0)
 src16 = depth(src, 16)
 
 
