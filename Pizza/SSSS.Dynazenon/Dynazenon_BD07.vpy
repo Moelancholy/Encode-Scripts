@@ -325,7 +325,7 @@ nuke = adptvgrnMod(nuke, strength = 0.05, static = False, luma_scaling = 7, grai
 
 deband = lvf.rfs(weakdeband, strongdeband, deband_ranges)
 deband = lvf.rfs(deband, nuke, nuke_ranges)
-deband = manual_masking(deband, nuke, r"C:\Users\twint\Documents\GitHub\Encode-Scripts\Pizza\SSSS.Dynazenon\masks\ep07_sky2.png", 19886, 20129)
+deband = manual_masking(deband, nuke, r"C:\Users\twint\Documents\GitHub\Encode-Scripts\Pizza\SSSS.Dynazenon\masks\ep07_sky2.png", 19986, 20129)
 deband = manual_masking(deband, nuke, r"C:\Users\twint\Documents\GitHub\Encode-Scripts\Pizza\SSSS.Dynazenon\masks\ep07_sky3.png", 24507, 24572)
 
 debandmask = core.std.Expr([rescalemask, tmask], 'x y +')
