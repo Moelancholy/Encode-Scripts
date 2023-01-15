@@ -10,7 +10,7 @@ from vsutil import depth, get_w, plane
 
 
 ###SOURCE
-src = core.lsmas.LWLibavSource(r"B:\めぞん一刻\MAISON_IKKOKU_07\BDMV\STREAM\00000.m2ts").resize.Point(src_left=1, resample_filter_uv="bicubic").std.Crop(240, 242, 0, 0)
+src = core.lsmas.LWLibavSource(r"B:\めぞん一刻\MAISON_IKKOKU_09\BDMV\STREAM\00001.m2ts").resize.Point(src_left=1, resample_filter_uv="bicubic").std.Crop(240, 242, 0, 0)
 src16 = depth(src, 16)
 
 
