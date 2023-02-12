@@ -1,16 +1,13 @@
-import vapoursynth as vs
-core = vs.core
-
-core.max_cache_size = 40*1024
-core.num_threads = 12
-
-from havsfunc import SMDegrain
+from vstools import vs, core, depth
 from muvsfunc import SSIM_downsample
-from vsutil import depth
+from vsdenoise import  mlm_degrain, Prefilter, SADMode, SearchMode
+from vskernels import BlackManMinLobe, Spline36
+
+core.set_affinity(range(12, 24), 30000)
 
 
 ###SOURCE
-src = core.lsmas.LWLibavSource(r"B:\めぞん一刻\MAISON_IKKOKU_01\BDMV\STREAM\00000.m2ts").resize.Point(src_left=1, resample_filter_uv="bicubic").std.Crop(240, 242, 0, 0)
+src = core.lsmas.LWLibavSource(r"A:\めぞん一刻\MAISON_IKKOKU_01\BDMV\STREAM\00000.m2ts").resize.Point(src_left=1, resample_filter_uv="bicubic").std.Crop(240, 242, 0, 0)
 src16 = depth(src, 16)
 
 
@@ -21,14 +18,21 @@ chromadown = core.fmtc.resample(src16, 958, 720, kernel = 'blackman')
 lumamix = core.std.Merge(lumadown, chromadown, 0.35)
 merge = core.std.ShufflePlanes([lumamix, chromadown], [0, 1, 2], vs.YUV)
 
-cden = SMDegrain(merge, tr = 4, thSAD=1, thSADC = 300, RefineMotion=True, chroma = True)
-cden = core.std.ShufflePlanes([merge, cden], [0, 1, 2], vs.YUV)
+cdenu1 = mlm_degrain(merge, tr = 3, refine = 4, thSAD=40, scaler = Spline36, downscaler=BlackManMinLobe, planes=1, prefilter = Prefilter.DFTTEST, search = SearchMode.DIAMOND, sad_mode = SADMode.ADAPTIVE_SATD_MIXED)
+cdenu2 = mlm_degrain(cdenu1, tr = 3, refine = 4, thSAD=120, scaler = Spline36, downscaler=BlackManMinLobe, planes=1, prefilter = Prefilter.BILATERAL, search = SearchMode.DIAMOND, sad_mode = SADMode.ADAPTIVE_SATD_MIXED)
+cdenv2 = core.knlm.KNLMeansCL(merge, d = 4, a = 4, s = 3, h = 0.25, channels = 'uv')
+
+cden = core.std.ShufflePlanes([merge, cdenu2, cdenv2], [0,1,2], vs.YUV)
 
 
 ###OUTPUT
 out = depth(cden, 10)
 
 out.set_output()
-#plane(merge, 1).set_output(3)
-#cden2.set_output(4)
-#compare.set_output(5)
+#merge.set_output(2)
+#cden.set_output(3)
+#v1.set_output(4)
+#v2.set_output(5)
+#v3.set_output(6)
+#cden4.set_output(7)
+#cden5.set_output(8)
