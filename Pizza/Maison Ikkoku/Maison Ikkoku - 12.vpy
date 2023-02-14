@@ -3,7 +3,7 @@ from muvsfunc import SSIM_downsample
 from vsdenoise import  mlm_degrain, Prefilter, SADMode, SearchMode
 from vskernels import BlackManMinLobe, Spline36
 
-core.set_affinity(range(12, 24), 40000)
+core.set_affinity(range(14, 24), 40000)
 
 
 ###SOURCE
