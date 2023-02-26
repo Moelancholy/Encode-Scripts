@@ -3,7 +3,7 @@ from muvsfunc import SSIM_downsample
 from vsdenoise import  mlm_degrain, Prefilter, SADMode, SearchMode
 from vskernels import BlackManMinLobe, Spline36
 
-core.set_affinity(range(14, 24), 30000)
+core.set_affinity(range(12, 24), 30000)
 
 ###SOURCE
 src = core.lsmas.LWLibavSource(r"A:\めぞん一刻\MAISON_IKKOKU_06\BDMV\STREAM\00002.m2ts").resize.Point(src_left=1, resample_filter_uv="bicubic").std.Crop(240, 242, 0, 0)
