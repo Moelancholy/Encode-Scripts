@@ -78,7 +78,8 @@ edstart = 31385
 native_ranges = [
     (opstart, opstart+2290), (19035, 19266), (23246, 23321), (edstart, edstart+2246), (34334, 34403)
 ]
-
+#note for BD: theres another sign at 11:30
+#fucked pan at 7:20, 13:25
 
 
 
