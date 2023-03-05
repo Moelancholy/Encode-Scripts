@@ -1,17 +1,14 @@
-from vstools import replace_ranges, vs, core
+from vstools import replace_ranges, vs, core, depth, get_y, iterate, replace_ranges
 
 core.set_affinity(range(12, 24), 40000)
 
 from havsfunc import SMDegrain
 from jvsfunc import ccdmod, retinex_edgemask
 from vodesfunc import Waifu2x_Doubler
-from vsdeband import F3kdb, adaptive_grain
+from vsdeband import F3kdb
 from vskernels import Bicubic, BicubicDidee, Bilinear
-from vsmasktools import diff_rescale, MinMax
+from vsmasktools import diff_rescale, MinMax, adg_mask
 from vsscale import SSIM
-from vstools import replace_ranges
-from vsutil import depth, get_y, iterate
-
 
 
 def eedi3s(clip, field=0, alpha=0.125, beta=0.25, gamma=50, nrad=2, mdis=20, vcheck=2, vthresh0=12, vthresh1=24, vthresh2=4, mclip=None): 
@@ -82,7 +79,6 @@ native_ranges = [
 #fucked pan at 7:20, 13:25
 
 
-
 ###SOURCE
 src = core.lsmas.LWLibavSource(r"B:\[SubsPlease] Tondemo Skill de Isekai Hourou Meshi - 08 (1080p) [066A826A].mkv")
 amzn = core.lsmas.LWLibavSource(r"C:\Users\twint\Downloads\Tondemo Skill de Isekai Hourou Meshi - 08 (Amazon Prime VBR 1080p).mkv")
@@ -125,19 +121,18 @@ linemask = retinex_edgemask(src_y)
 texturemask = texture_mask(denoise_y, 1)
 debandmask = core.akarin.Expr([linemask, texturemask], 'x 1.5 y * +')
 
-deband = F3kdb.deband(cden, 16, [36, 40, 40])
+deband = F3kdb.deband(cden, 16, [36*4, 40*4, 40*4])
 deband = core.std.MaskedMerge(deband, cden, debandmask)
 
-###OUTPUT
-grainmask = adaptive_grain(src_y, luma_scaling = 6, show_mask = True)
 
+###OUTPUT
+grainmask = adg_mask(src_y, luma_scaling = 6)
 grain = core.noise.Add(deband, type = 3, var = 3, seed = 5)
 grain = core.std.MaskedMerge(deband, grain, grainmask)
 out = depth(grain, 10)
 
-
 out.set_output()
-#src.set_output(2)
+src.set_output(2)
 #amzn.set_output(3)
 #descalemask.set_output(4)
 #grain3.set_output(5)
