@@ -101,12 +101,13 @@ def clamp_aa(src: vs.VideoNode, weak: vs.VideoNode, strong: vs.VideoNode, streng
 
 
 ###SCENEFILTERING
-opstart = 2278 #first frame purple
-opend = 4434
-ed_ranges = [(30569, 32725)]
+opstart = 1654 #first frame purple
+opend = 3812
+ed_ranges = [(25105, 27262)]
 
 no_aa_ranges = [
-    
+    (1590, 1653), (18886, 18926), (25059, 25104), (27287, 27345),
+    (28268, 28275), 
 ]
 
 
@@ -116,9 +117,9 @@ bili_ranges = [
     (opstart+1382, opstart+1472), (opstart+1504, opstart+1593),
     (opstart+1651, opstart+1681), (opstart+1824, opstart+1863),
     (opstart+1894, opstart+1931), (opstart+1968, opstart+2038),
-    (5967, 5995), (8344, 8364), (10791, 10838), (16432, 16532),
-    (23371, 23406), (24734, 24758), (25759, 25853),
-    (30279, 30353), 
+    (13177, 13252), (13618, 13741), (14312, 14361),
+    (18726, 18808), (23144, 23262), (23464, 23517),
+    (23768, 23832), (30806, 30872), (31438, 31634),
 ]
 
 
@@ -128,43 +129,42 @@ bili_lines_ranges = [
     (opstart+1361, opstart+1381), (opstart+1473, opstart+1744),
     (opstart+1594, opstart+1650), (opstart+1682, opstart+1823),
     (opstart+1864, opstart+1893), (opstart+1932, opstart+1967),
-    (opstart+2039, opstart+2091), (1530, 1628), (5397, 5416), (5873, 5947),
-    (5996, 6043), (7266, 7297), (8365, 8402), (9013, 9082), (9976, 9982),
-    (10360, 10423), (10839, 11067), (12644, 12762),
-    (13019, 13041), (13114, 13156), (13214, 13470),
-    (13630, 13677), (13814, 13854), (13929, 14033),
-    (14381, 14439), (14499, 14527), (16205, 16218),
-    (16390, 16431), (16556, 16679), (17311, 17331), 
-    (19068, 19144), (19598, 19637), (19682, 19730),
-    (22696, 22843), (23407, 23550), (23936, 24024),
-    (24318, 24384), (24724, 24733), (24759, 24761),
-    (25547, 25559), (25607, 25758), (25854, 25895),
-    (26030, 26098), (28582, 28658), (30120, 30144),
+    (opstart+2039, opstart+2091), (4167, 4230), (5270, 5328), (7152, 7313),
+    (10422, 10558), (11623, 11657), (11899, 12053),
+    (12756, 12894), (13561, 13617), (13771, 13881),
+    (14097, 14209), (14281, 14311), (14362, 14396),
+    (15492, 15513), (15841, 15923), (16228, 16341),
+    (18005, 18051), (18809, 18885), (18973, 19074),
+    (20724, 20966), (23263, 23321), (23518, 23636),
+    (23833, 23861), (24557, 24609), (27574, 27625),
+    (27892, 27902), (27992, 28267), (28276, 28600),
+    (29743, 29992), (30873, 30955), (32105, 32217),
 ]
 
 
 medium_aa_ranges = [
-    (5060, 5190), (8566, 8590), (10424, 10615),
-    (10670, 10790), (11867, 12010), (13576, 13629),
-    (18075, 18115), (18595, 18641), (20472, 20544),
-    (20978, 21036), (22339, 22447), (23071, 23188),
-    (23839, 23935), (26923, 26954), 
+    (3860, 3954), (6464, 6564), (7634, 7717), (7919, 8001),
+    (9983, 10083), (12121, 12297), (12634, 12703), (13368, 13507),
+    (13943, 14061), (15226, 15304), (17551, 17653),
+    (18231, 18277), (19222, 19402), (20036, 20192),
+    (21235, 21425), (22258, 22544), (23357, 23463),
+    (24610, 24668), 
 ]
 
 
 strong_aa_ranges = [
     (opstart+269, opstart+333), (opstart+459, opstart+467),
-    (154, 180), (1963, 2120), (10022, 10132), (17941, 18074),
-    (20422, 20471), (27008, 27198), 
+    (12704, 12736), (16822, 16880), (18159, 18230),
+    (18278, 18335), (18726, 18808), 
 ]
 
 #27008 custom mask BD
 
 ###SOURCES
-cbr = core.lsmas.LWLibavSource(r"C:\Users\twint\Downloads\Urusei Yatsura (2022) - 21 (Amazon Prime CBR 1080p).mkv")
-vbr = core.lsmas.LWLibavSource(r"C:\Users\twint\Downloads\Urusei Yatsura (2022) - 21 (Amazon Prime VBR 1080p).mkv")
-disney = core.lsmas.LWLibavSource(r"C:\Users\twint\Downloads\Urusei Yatsura (2022) - 21 (Disney+ 1080p).mkv")[24:-24]
-bili = core.lsmas.LWLibavSource(r"C:\Users\twint\Downloads\Urusei Yatsura (2022) - 21 (B-Global 2160p).mkv")
+cbr = core.lsmas.LWLibavSource(r"C:\Users\twint\Downloads\Urusei Yatsura (2022) - 22 (Amazon Prime CBR 1080p).mkv")
+vbr = core.lsmas.LWLibavSource(r"C:\Users\twint\Downloads\Urusei Yatsura (2022) - 22 (Amazon Prime VBR 1080p).mkv")
+disney = core.lsmas.LWLibavSource(r"C:\Users\twint\Downloads\Urusei Yatsura (2022) - 22 (Disney+ 1080p).mkv")[24:-24]
+bili = core.lsmas.LWLibavSource(r"C:\Users\twint\Downloads\Urusei Yatsura (2022) - 22 (B-Global 2160p).mkv")
 bili = depth(ssim_downsample(depth(bili, 16), 1920, 1080, 1, BicubicDidee), 8)
 
 test = lehmer_diff_merge([disney, vbr, cbr, bili])
